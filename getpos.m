@@ -157,7 +157,7 @@ for n=1:numel(M)
         % Get the current "Position" vector of H
         temp=get(h,'position');
         % Get the current "Position" vector of HREF
-        if ~href % HREF is the Root object (no 'Position' property)
+        if strcmp(get(href, 'type'), 'root') % HREF is the Root object (no 'Position' property)
             temp_href=get(href,'screensize'); %%% Should be safe here !
         else temp_href=get(href,'position');
         end
