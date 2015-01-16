@@ -151,7 +151,7 @@ for n=1:numel(M)
         % Get the current "Position" vector of H
         position_in_unit=get(h,'position');
         % Get the current "Position" vector of HREF
-        if ~href % HREF is the Root object (no 'Position' property)
+        if (isnumeric(href) && ~href) || (isgraphics(href) && isequal(href, groot)) % HREF is the Root object (no 'Position' property)
             position_ref_unit=get(href,'screensize'); %%% Should be safe here !
         else position_ref_unit=get(href,'position');
         end
