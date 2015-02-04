@@ -290,16 +290,6 @@ end
 
 % Create a temporary legend to get all the objects
 
-iscont = strcmp(get(legin{1}, 'type'), 'contour');
-cflag = any(iscont);
-if cflag
-    % Not sure why, but 2014b needs contour labels to be listed last in a
-    % legend, or everything goes haywire 
-    
-    [srt, isrt] = sort(iscont);
-    legin{1} = legin{1}(isrt);
-    legin{2} = legin{2}(isrt);
-end
 
 S = warning('off', 'MATLAB:legend:PlotEmpty');
 [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
@@ -309,6 +299,27 @@ warning(S);
 if nobj == 0
     warning('Plot empty; no legend created');
     return
+end
+
+iscont = strcmp(get(h.labeledobj, 'type'), 'contour');
+cflag = any(iscont);
+if cflag
+    % Not sure why, but 2014b needs contour labels to be listed last in a
+    % legend, or everything goes haywire.  This should serve as a
+    % workaround until the bug is fixed.
+    
+    if length(legin) == 1
+        legin = {h.labeledobj legin{1}};
+    end
+        
+    delete(h.leg);
+    
+    [srt, isrt] = sort(iscont);
+    legin{1} = legin{1}(isrt);
+    legin{2} = legin{2}(isrt);
+    
+    [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
+
 end
 
 % # rows and columns
