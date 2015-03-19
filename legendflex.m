@@ -67,6 +67,14 @@ function varargout = legendflex(varargin)
 %
 % This function should support all types of plot objects.
 %
+% Updates to labeled line and patch properties should be reflected in the
+% legend.  In pre-R2014b versions of Matlab (those that use the old
+% non-object graphics handles), properties of more complex legend labels,
+% such as contours, quivers, bars, etc.) will also be synced to the legend;
+% however, at this time, the code doesn't update properties for anything
+% other than lines and patches in R2014b+ (haven't found a good way to
+% listen for changes to the properties of the other graphics object types).
+%
 % A note on resizing: This function assigns a resize function to the parent
 % figure to maintain the position of the legend (in terms of anchor
 % location and buffer) as the figure size changes.  If you manually resize
@@ -204,12 +212,9 @@ function varargout = legendflex(varargin)
 
 % Copyright 2011-2014 Kelly Kearney
 
-if verLessThan('matlab', '8.4.0')
-    tmp = cell(1, nargout);
-    [tmp{:}] = legendflex_pre2014b(varargin{:});
-    varargout = tmp;
-    return
-end
+% Detemine whether HG2 is in use
+
+hg2flag = ~verLessThan('matlab', '8.4.0');
 
 %-------------------
 % Parse input
@@ -223,9 +228,11 @@ end
 % (M, ...)
 % (h, M, ...)
 
-% Look for handle array
+narginchk(1,Inf);
 
-% handlepassed = isnumeric(varargin{1}) & all(ishandle(varargin{1}));
+% Split input into the variables that will be passed to legend (handles and
+% labels) and everything else
+
 handlepassed = all(ishandle(varargin{1})); % for HG1/HG2 
 
 if handlepassed
@@ -248,11 +255,17 @@ end
 
 % Parse my optional properties
 
+if hg2flag
+    defref = gobjects(0);
+else
+    defref = NaN;
+end
+
 p = inputParser;
 p.addParamValue('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
 p.addParamValue('ncol',       NaN,       @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
 p.addParamValue('nrow',       NaN,       @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-p.addParamValue('ref',        gobjects(0), @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
+p.addParamValue('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
 p.addParamValue('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
 p.addParamValue('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
 p.addParamValue('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
@@ -290,7 +303,6 @@ end
 
 % Create a temporary legend to get all the objects
 
-
 S = warning('off', 'MATLAB:legend:PlotEmpty');
 [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
 nobj = length(h.labeledobj);
@@ -301,12 +313,16 @@ if nobj == 0
     return
 end
 
+% There's a bug in R2014b-R2015a that causes rendering issues if a contour
+% object is included in a legend and legend is called with more than one
+% output. For some reason, the rendering issues disappear only if the
+% contour object(s) is listed last in the legend.  So for now, my
+% workaround for this is to change the order of the legend labels as
+% necessary.
+
 iscont = strcmp(get(h.labeledobj, 'type'), 'contour');
-cflag = any(iscont);
-if cflag
-    % Not sure why, but 2014b needs contour labels to be listed last in a
-    % legend, or everything goes haywire.  This should serve as a
-    % workaround until the bug is fixed.
+cbugflag = ~verLessThan('matlab', '8.4.0') && any(iscont);
+if cbugflag
     
     if length(legin) == 1
         legin = {h.labeledobj legin{1}};
@@ -338,22 +354,27 @@ end
 
 % Reference object
 
-if isempty(Opt.ref)
-    
-    if all(ishandle(legin{1}))
-        tmp = ancestor(legin{1}, 'axes');
-        if iscell(tmp)
-            Opt.ref = tmp{1}; 
-        else
-            Opt.ref = tmp(1);
-        end
-    else
-        Opt.ref = gca;
-    end
-    
-%     tmp = get(h.leg, 'UserData');
-%     Opt.ref = tmp.PlotHandle; % TODO: how to find default axis with new HG?
+if hg2flag
 
+    if isempty(Opt.ref)
+    
+        if all(ishandle(legin{1}))
+            tmp = ancestor(legin{1}, 'axes');
+            if iscell(tmp)
+                Opt.ref = tmp{1}; 
+            else
+                Opt.ref = tmp(1);
+            end
+        else
+            Opt.ref = gca;
+        end
+
+    end
+else
+    if isnan(Opt.ref)
+        tmp = get(h.leg, 'UserData');
+        Opt.ref = tmp.PlotHandle; 
+    end
 end
 if ~ishandle(Opt.ref)
     error('Input ref must be a graphics handle');
@@ -494,8 +515,11 @@ hnew.leg = axes('units', 'pixels', ...
 textProps = {'FontAngle','FontName','FontSize','FontUnits','FontWeight','Interpreter','HorizontalAlignment','VerticalAlignment'};
 textVals = get(h.obj(1:nobj), textProps);
 
-% hnew.obj = zeros(size(h.obj));
-hnew.obj = gobjects(size(h.obj));
+if hg2flag
+    hnew.obj = gobjects(size(h.obj));
+else
+    hnew.obj = zeros(size(h.obj));
+end
 for it = 1:nobj
     props = [textProps; textVals(it,:)];
     hnew.obj(it) = text(xtext(it), ytext(it), h.textstr{it}, props{:}, ...
@@ -576,10 +600,11 @@ set(figh, 'currentaxes', currax);
 drawnow; % Not sure why this is necessary for the currentaxes to take effect, but it is
 
 %-------------------
-% Resize callback
+% Callbacks and 
+% listeners
 %-------------------
 
-rsz = get(figh, 'ResizeFcn');
+% Save some relevant variables in the new legend axis's application data
 
 Lf.ref        = Opt.ref;
 Lf.w          = wnewleg;
@@ -591,23 +616,45 @@ Lf.bufferunit = Opt.bufferunit;
 Lf.plotobj    = h.labeledobj;
 Lf.legobj     = hnew.obj;
 
-
-if isequal(rsz, @resizefig)
-    Lf.oldrsz = [];
-else
-    Lf.oldrsz = rsz;
-end
-
-if isappdata(figh, 'legflexchildren')
-    ch = getappdata(figh, 'legflexchildren');
-    setappdata(figh, 'legflexchildren', [ch hnew.leg]);
-else
-    setappdata(figh, 'legflexchildren', hnew.leg);
-end
-
 setappdata(hnew.leg, 'legflex', Lf);
-set(figh, 'ResizeFcn', @resizefig);
 
+% Resize listeners
+
+addlistener(hnew.leg, 'Position', 'PostSet', @(src,evt) updatelegappdata(src,evt,hnew.leg));
+if hg2flag && strcmp(Lf.ref.Type, 'figure')
+    addlistener(Lf.ref, 'SizeChanged', @(src,evt) updatelegpos(src,evt,hnew.leg));
+else
+    addlistener(Lf.ref, 'Position', 'PostSet', @(src,evt) updatelegpos(src,evt,hnew.leg));
+end
+rsz = get(figh, 'ResizeFcn'); 
+if isempty(rsz) % No previous resize function
+    set(figh, 'ResizeFcn', @updatelegfigresize);
+else 
+    if ~iscell(rsz)
+        rsz = {rsz};
+    end
+    hasprev = cellfun(@(x) isequal(x, @updatelegfigresize), rsz);
+    if ~hasprev
+        set(figh, 'ResizeFcn', cellfun(@(x)feval(x,h,e), [rsz @updatelegfigresize]));
+    end
+end
+
+% Run the resync function if anything changes with the labeled objects
+
+objwatch = findall(h.labeledobj, 'type', 'line', '-or', 'type', 'patch');
+
+for ii = 1:length(objwatch)
+    switch lower(get(objwatch(ii), 'type'))
+        case 'line'
+            triggerprops = {'Color','LineStyle','LineWidth','Marker','MarkerSize','MarkerEdgeColor','MarkerFaceColor'};
+            addlistener(objwatch(ii), triggerprops, 'PostSet', @(h,ed) resyncprops(h,ed,hnew.leg));
+        case 'patch'
+            triggerprops = {'CData','CDataMapping','EdgeAlpha','EdgeColor','FaceAlpha','FaceColor','LineStyle','LineWidth','Marker','MarkerEdgeColor','MarkerFaceColor','MarkerSize'};
+            addlistener(objwatch(ii), triggerprops, 'PostSet', @(h,ed) resyncprops(h,ed,hnew.leg));
+    end
+end
+
+    
 %-------------------
 % Output
 %-------------------
@@ -669,101 +716,96 @@ shift = [...
 corner = refxy(anchor(1),:) + buffer + shift(anchor(2),:);
 legpos = [corner w h];
 
-
 %------------------------
-% Resize function
+% Listener functions
 %------------------------
 
-function resizefig(hfig, ed, oldrsz)
+% If user manually resizes the legend, update the app data
 
-% Find legendflex axes
+function updatelegappdata(src, evt, legax)
+Lf = getappdata(legax, 'legflex');
+pos = getpos(legax, 'px');
+Lf.w = pos(3);
+Lf.h = pos(4);
+setappdata(legax, 'legflex', Lf);
 
-ax = getappdata(hfig, 'legflexchildren');
+% If reference object moves or resizes, reposition the legend appropriately
 
-for ia = 1:length(ax)
-    
-    if ishandle(ax(ia)) % if axis has been deleted, ignore this
-    
-        Lf = getappdata(ax(ia), 'legflex');
+function updatelegpos(src, evt, legax)
+Lf = getappdata(legax, 'legflex');
+legpos = positionleg(Lf.ref, Lf.w, Lf.h, Lf.anchor, Lf.buffer, Lf.bufunit);
+set(legax, 'Units', Lf.bufferunit, 'Position', legpos);
 
-        % ResizeFcn unassociated w/ legendflex (if applicable)
+% Since figure resize can change axis size without actually triggering a
+% listener, force this
 
-        if ~isempty(Lf.oldrsz)
-            if iscell(Lf.oldrsz)
-                feval(Lf.oldrsz{1}, hfig, ed, Lf.oldrsz{2:end});
-            else
-                feval(Lf.oldrsz, hfig, ed);
-            end
-        end
-        
-        % Get current size of legend axis (in case user altered it)
-        
-        axunit = get(ax(ia), 'units');
-        
-        pos = getpos(ax(ia), 'px');
-        Lf.w = pos(3) ;
-        Lf.h = pos(4);
-%         fprintf('%.2f %.2f\n', Lf.w, Lf.h);
+function updatelegfigresize(src, evt)
 
-        % Redraw legend with updated position
-
-        legpos = positionleg(Lf.ref, Lf.w, Lf.h, Lf.anchor, Lf.buffer, Lf.bufunit);
-        tmpax = axes('units', Lf.bufferunit, 'position', legpos,'visible','off');
-        legpos = getpos(tmpax, 'px');
-        delete(tmpax);
-        
-        set(ax(ia), 'unit', 'pixels');
-        set(ax(ia), 'position', legpos); 
-        set(ax(ia), 'unit', axunit);
-            
-        % Check for changed properties of all lines and patches
-
-        str = cellstr(num2str((1:length(Lf.plotobj))'));
-        drawnow; % This results in some crazy flashing objects, but without it legend throws an error
-        [htmp.leg, htmp.obj, htmp.labeledobj, htmp.textstr] = legend(Lf.plotobj, str);
-
-        objtype = get(Lf.legobj, 'type');
-        isline = strcmp(objtype, 'line');
-        ispatch = strcmp(objtype, 'patch');
-        ishg = strcmp(objtype, 'hggroup');
-        hgidx = find(ishg);
-
-        lobj = [Lf.legobj(isline) htmp.obj(isline)];
-        pobj = [Lf.legobj(ispatch) htmp.obj(ispatch)];
-
-        if ~isempty(hgidx)
-            for ih = hgidx
-                chldln1 = findall(Lf.legobj(ih), 'type', 'line');
-                chldln2 = findall(htmp.obj(ih), 'type', 'line'); 
-
-                lobj = [lobj; [chldln1 chldln2]];
-
-                chldpa1 = findall(Lf.legobj(ih), 'type', 'patch');
-                chldpa2 = findall(htmp.obj(ih), 'type', 'patch'); 
-
-                pobj = [pobj; [chldpa1 chldpa2]];
-
-            end
-        end
-
-        lprops = {'color','linestyle','linewidth','marker','markersize','markeredgecolor','markerfacecolor'};
-        for il = 1:size(lobj,1)
-            lvals = get(lobj(il,2), lprops);
-            pv = [lprops; lvals];
-            set(lobj(il,1), pv{:});
-        end
-
-        pprops = {'cdata','cdatamapping','edgealpha','edgecolor','facealpha','facecolor','linestyle','linewidth','marker','markeredgecolor','markerfacecolor','markersize'};
-        for ip = 1:size(pobj,1)
-            pvals = get(pobj(ip,2), pprops);
-            pv = [pprops; pvals];
-            set(pobj(ip,1), pv{:});
-        end
-
-        delete(htmp.leg);
+allax = findall(src, 'type', 'axes');
+for ii = 1:length(allax)
+    isleg = ~isempty(getappdata(allax(ii), 'legflex'));
+    if ~isleg
+        pos = get(allax(ii), 'Position');
+        set(allax(ii), 'Position', pos); % No change, just trigger PostSet
     end
-        
 end
+
+% If plotted object changes, resync with legend
+
+function resyncprops(src, evt, legax)
+
+Lf = getappdata(legax, 'legflex');
+
+str = cellstr(num2str((1:length(Lf.plotobj))'));
+% drawnow; % This results in some crazy flashing objects, but without it legend throws an error
+[htmp.leg, htmp.obj, htmp.labeledobj, htmp.textstr] = legend(Lf.plotobj, str);
+
+objtype = get(Lf.legobj, 'type');
+isline = strcmp(objtype, 'line');
+ispatch = strcmp(objtype, 'patch');
+ishg = strcmp(objtype, 'hggroup');
+hgidx = find(ishg);
+
+lobj = [Lf.legobj(isline) htmp.obj(isline)];
+pobj = [Lf.legobj(ispatch) htmp.obj(ispatch)];
+
+if ~isempty(hgidx)
+    for ih = hgidx
+        chldln1 = findall(Lf.legobj(ih), 'type', 'line');
+        chldln2 = findall(htmp.obj(ih), 'type', 'line'); 
+
+        lobj = [lobj; [chldln1 chldln2]];
+
+        chldpa1 = findall(Lf.legobj(ih), 'type', 'patch');
+        chldpa2 = findall(htmp.obj(ih), 'type', 'patch'); 
+
+        pobj = [pobj; [chldpa1 chldpa2]];
+
+    end
+end
+
+lprops = {'color','linestyle','linewidth','marker','markersize','markeredgecolor','markerfacecolor'};
+for il = 1:size(lobj,1)
+    lvals = get(lobj(il,2), lprops);
+    pv = [lprops; lvals];
+    set(lobj(il,1), pv{:});
+end
+
+pprops = {'cdata','cdatamapping','edgealpha','edgecolor','facealpha','facecolor','linestyle','linewidth','marker','markeredgecolor','markerfacecolor','markersize'};
+for ip = 1:size(pobj,1)
+    pvals = get(pobj(ip,2), pprops);
+    pv = [pprops; pvals];
+    set(pobj(ip,1), pv{:});
+end
+
+cmap = colormap(htmp.leg);
+colormap(legax, cmap);
+
+delete(htmp.leg);
+
+
+
+
 
 
     
