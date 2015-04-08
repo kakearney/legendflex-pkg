@@ -560,18 +560,20 @@ for ii = 1:nsymbol
         hnew.obj(nobj+ii) = copyobj(h.obj(nobj+ii), hnew.leg);
         
         tag = get(h.obj(nobj+ii),'Tag');
-        if ~isempty(tag)
+        if ~isempty(tag) % assumes empty tags indicate repetition of previous tag (true pre-2014b)
             [blah, idx] = ismember(tag,h.textstr);
         end
-        xy = get(h.obj(nobj+ii), {'xdata', 'ydata'});
         
+        xy = get(h.obj(nobj+ii), {'xdata', 'ydata'});
+
         xnorm = xy{1}./symbolWidthNm;
         ynorm = (xy{2}- (1-idx*rowHeightNm))./rowHeightNm;
-        
+
         xnew = xnorm * symbolWidthPx + xsymbnew(idx);
         ynew = ynorm * rowHeight     + ysymbnew(idx);
-        
+
         set(hnew.obj(nobj+ii), 'xdata', xnew, 'ydata', ynew);
+ 
     end
     
 end
@@ -723,18 +725,21 @@ legpos = [corner w h];
 % If user manually resizes the legend, update the app data
 
 function updatelegappdata(src, evt, legax)
-Lf = getappdata(legax, 'legflex');
-pos = getpos(legax, 'px');
-Lf.w = pos(3);
-Lf.h = pos(4);
-setappdata(legax, 'legflex', Lf);
-
+if ishandle(legax)
+    Lf = getappdata(legax, 'legflex');
+    pos = getpos(legax, 'px');
+    Lf.w = pos(3);
+    Lf.h = pos(4);
+    setappdata(legax, 'legflex', Lf);
+end
 % If reference object moves or resizes, reposition the legend appropriately
 
 function updatelegpos(src, evt, legax)
-Lf = getappdata(legax, 'legflex');
-legpos = positionleg(Lf.ref, Lf.w, Lf.h, Lf.anchor, Lf.buffer, Lf.bufunit);
-set(legax, 'Units', Lf.bufferunit, 'Position', legpos);
+if ishandle(legax) 
+    Lf = getappdata(legax, 'legflex');
+    legpos = positionleg(Lf.ref, Lf.w, Lf.h, Lf.anchor, Lf.buffer, Lf.bufunit);
+    set(legax, 'Units', Lf.bufferunit, 'Position', legpos);
+end
 
 % Since figure resize can change axis size without actually triggering a
 % listener, force this
@@ -754,54 +759,56 @@ end
 
 function resyncprops(src, evt, legax)
 
-Lf = getappdata(legax, 'legflex');
+if ishandle(legax) % In case it's been deleted
+    
+    Lf = getappdata(legax, 'legflex');
 
-str = cellstr(num2str((1:length(Lf.plotobj))'));
-% drawnow; % This results in some crazy flashing objects, but without it legend throws an error
-[htmp.leg, htmp.obj, htmp.labeledobj, htmp.textstr] = legend(Lf.plotobj, str);
+    str = cellstr(num2str((1:length(Lf.plotobj))'));
+    [htmp.leg, htmp.obj, htmp.labeledobj, htmp.textstr] = legend(Lf.plotobj, str);
 
-objtype = get(Lf.legobj, 'type');
-isline = strcmp(objtype, 'line');
-ispatch = strcmp(objtype, 'patch');
-ishg = strcmp(objtype, 'hggroup');
-hgidx = find(ishg);
+    objtype = get(Lf.legobj, 'type');
+    isline = strcmp(objtype, 'line');
+    ispatch = strcmp(objtype, 'patch');
+    ishg = strcmp(objtype, 'hggroup');
+    hgidx = find(ishg);
 
-lobj = [Lf.legobj(isline) htmp.obj(isline)];
-pobj = [Lf.legobj(ispatch) htmp.obj(ispatch)];
+    lobj = [Lf.legobj(isline) htmp.obj(isline)];
+    pobj = [Lf.legobj(ispatch) htmp.obj(ispatch)];
 
-if ~isempty(hgidx)
-    for ih = hgidx
-        chldln1 = findall(Lf.legobj(ih), 'type', 'line');
-        chldln2 = findall(htmp.obj(ih), 'type', 'line'); 
+    if ~isempty(hgidx)
+        for ih = hgidx
+            chldln1 = findall(Lf.legobj(ih), 'type', 'line');
+            chldln2 = findall(htmp.obj(ih), 'type', 'line'); 
 
-        lobj = [lobj; [chldln1 chldln2]];
+            lobj = [lobj; [chldln1 chldln2]];
 
-        chldpa1 = findall(Lf.legobj(ih), 'type', 'patch');
-        chldpa2 = findall(htmp.obj(ih), 'type', 'patch'); 
+            chldpa1 = findall(Lf.legobj(ih), 'type', 'patch');
+            chldpa2 = findall(htmp.obj(ih), 'type', 'patch'); 
 
-        pobj = [pobj; [chldpa1 chldpa2]];
+            pobj = [pobj; [chldpa1 chldpa2]];
 
+        end
     end
+
+    lprops = {'color','linestyle','linewidth','marker','markersize','markeredgecolor','markerfacecolor'};
+    for il = 1:size(lobj,1)
+        lvals = get(lobj(il,2), lprops);
+        pv = [lprops; lvals];
+        set(lobj(il,1), pv{:});
+    end
+
+    pprops = {'cdata','cdatamapping','edgealpha','edgecolor','facealpha','facecolor','linestyle','linewidth','marker','markeredgecolor','markerfacecolor','markersize'};
+    for ip = 1:size(pobj,1)
+        pvals = get(pobj(ip,2), pprops);
+        pv = [pprops; pvals];
+        set(pobj(ip,1), pv{:});
+    end
+
+    cmap = colormap(htmp.leg);
+    colormap(legax, cmap);
+
+    delete(htmp.leg);
 end
-
-lprops = {'color','linestyle','linewidth','marker','markersize','markeredgecolor','markerfacecolor'};
-for il = 1:size(lobj,1)
-    lvals = get(lobj(il,2), lprops);
-    pv = [lprops; lvals];
-    set(lobj(il,1), pv{:});
-end
-
-pprops = {'cdata','cdatamapping','edgealpha','edgecolor','facealpha','facecolor','linestyle','linewidth','marker','markeredgecolor','markerfacecolor','markersize'};
-for ip = 1:size(pobj,1)
-    pvals = get(pobj(ip,2), pprops);
-    pv = [pprops; pvals];
-    set(pobj(ip,1), pv{:});
-end
-
-cmap = colormap(htmp.leg);
-colormap(legax, cmap);
-
-delete(htmp.leg);
 
 
 
