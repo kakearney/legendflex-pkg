@@ -103,12 +103,12 @@ function varargout = legendflex(varargin)
 %
 % Optional input variables (passed as parameter/value pairs): [default]
 %
-%   ncol:       number of columns, or NaN to indicate as many as necessary
-%               given the # of labeled objects [1 if nrow is NaN, NaN
+%   ncol:       number of columns, or 0 to indicate as many as necessary
+%               given the # of labeled objects [1 if nrow is 0, 0
 %               otherwise] 
 %
-%   nrow:       number of rows, or NaN to indicate as many as necessary
-%               given the # of labeled objects [NaN]
+%   nrow:       number of rows, or 0 to indicate as many as necessary
+%               given the # of labeled objects [0]
 %
 %   ref:        handle of object used to position the legend. This can be
 %               either a figure or a child object of a figure (and does not
@@ -263,8 +263,8 @@ end
 
 p = inputParser;
 p.addParamValue('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
-p.addParamValue('ncol',       NaN,       @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-p.addParamValue('nrow',       NaN,       @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+p.addParamValue('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+p.addParamValue('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
 p.addParamValue('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
 p.addParamValue('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
 p.addParamValue('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
@@ -340,12 +340,12 @@ end
 
 % # rows and columns
 
-if isnan(Opt.ncol) && isnan(Opt.nrow)
+if (Opt.ncol == 0) && (Opt.nrow == 0)
     Opt.ncol = 1;
     Opt.nrow = nobj;
-elseif isnan(Opt.ncol)
+elseif (Opt.ncol == 0)
     Opt.ncol = ceil(nobj./Opt.nrow);
-elseif isnan(Opt.nrow)
+elseif (Opt.nrow == 0)
     Opt.nrow = ceil(nobj./Opt.ncol);
 end
 if Opt.ncol*Opt.nrow < nobj
