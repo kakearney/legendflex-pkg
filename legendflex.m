@@ -637,7 +637,8 @@ else
     end
     hasprev = cellfun(@(x) isequal(x, @updatelegfigresize), rsz);
     if ~hasprev
-        set(figh, 'ResizeFcn', cellfun(@(x)feval(x,h,e), [rsz @updatelegfigresize]));
+        rsz = {rsz{:} @updatelegfigresize};
+        set(figh, 'ResizeFcn', {@wrapper, rsz});
     end
 end
 
@@ -808,6 +809,13 @@ if ishandle(legax) % In case it's been deleted
     colormap(legax, cmap);
 
     delete(htmp.leg);
+end
+
+% Wrapper to add multiple callback functions to resize
+
+function wrapper(ObjH, EventData, fcnList)
+for ii = 1:length(fcnList)
+    feval(fcnList{ii}, ObjH, EventData);
 end
 
 
