@@ -229,6 +229,7 @@ function varargout = legendflex(varargin)
 % Detemine whether HG2 is in use
 
 hg2flag = ~verLessThan('matlab', '8.4.0');
+r2016aflag = ~verLessThan('matlab', '9.0.0');
 
 %-------------------
 % Parse input
@@ -276,17 +277,17 @@ else
 end
 
 p = inputParser;
-p.addParamValue('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
-p.addParamValue('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-p.addParamValue('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-p.addParamValue('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
-p.addParamValue('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
-p.addParamValue('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
-p.addParamValue('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
-p.addParamValue('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
-p.addParamValue('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
-p.addParamValue('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'nonnegative', 'size', [1 3]}));
-p.addParamValue('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
+p.addParameter('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
+p.addParameter('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+p.addParameter('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+p.addParameter('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
+p.addParameter('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
+p.addParameter('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
+p.addParameter('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
+p.addParameter('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
+p.addParameter('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
+p.addParameter('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'nonnegative', 'size', [1 3]}));
+p.addParameter('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
 
 p.KeepUnmatched = true;
 
@@ -319,8 +320,28 @@ end
 % Create a temporary legend to get all the objects
 
 S = warning('off', 'MATLAB:legend:PlotEmpty');
-[h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
-nobj = length(h.labeledobj);
+if r2016aflag
+    % The new legend objects are pretty opaque... even diving into the 
+    % undocumented properties, I haven't been able to find the handles of 
+    % the legend sub-components (lines, text, etc).  So I need to stick to 
+    % the legacy version, which creates an axis object rather than legend 
+    % object. Legacy version has bug in text properties parsing, though, so 
+    % need to work around that too: use the new-style legend object to get
+    % proper text properties, then use those to alter the buggy old-style
+    % legend.
+    tmp = legend(legin{:}, extra{:}, 'location', 'northeast');
+    textProps = {'FontAngle','FontName','FontSize','FontUnits','FontWeight','Interpreter'};
+    tprop = get(tmp, textProps);
+    delete(tmp);
+    [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
+    nobj = length(h.labeledobj);
+    for it = 1:length(textProps)
+        set(h.obj(1:nobj), textProps{it}, tprop{it});
+    end
+else
+    [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
+    nobj = length(h.labeledobj);
+end
 warning(S);
 
 if nobj == 0
