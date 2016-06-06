@@ -14,10 +14,12 @@ txt = {'Data 1', '$\frac{1}{2}$', '$var_{ij}$'};
 nt = length(txt);
 na = length(ax);
 
-set(ax, 'xlim', [0 4], 'ylim', [0 4]);
+set(ax, 'xlim', [0 nt+1], 'ylim', [0 nt+1]);
 
 for ii = 1:na
-    ht(ii,:) = text(1:3,1:3,txt, 'parent', ax(ii));
+    ht(ii,:) = text(1:nt,1:nt,txt, 'parent', ax(ii), ...
+                                 'interpreter', 'none', ...
+                                 'fontsize', 14);
 end
 
 set(ht(2,:), 'interpreter', 'latex');
