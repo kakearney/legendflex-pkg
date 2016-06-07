@@ -14,7 +14,9 @@ function setgetposexamples(n)
 %
 
 % Check the number of input arguments
-error(nargchk(0,1, nargin))
+
+narginchk(0,1);
+
 
 if nargin==0
     n=1;   
