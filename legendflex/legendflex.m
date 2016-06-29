@@ -333,7 +333,9 @@ if r2016aflag
     textProps = {'FontAngle','FontName','FontSize','FontUnits','FontWeight','Interpreter'};
     tprop = get(tmp, textProps);
     delete(tmp);
+    wtmp = warning('off', 'MATLAB:handle_graphics:exceptions:SceneNode'); % silence Latex interpreter thing
     [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
+    warning(wtmp);
     nobj = length(h.labeledobj);
     for it = 1:length(textProps)
         set(h.obj(1:nobj), textProps{it}, tprop{it});
