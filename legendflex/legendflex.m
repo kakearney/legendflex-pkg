@@ -166,7 +166,8 @@ function varargout = legendflex(varargin)
 %               spacing typical of a regular legend, but occassionally the
 %               extent properties wrap a little too close to text, making
 %               things look crowded; in these cases you can try unsquishing
-%               things via this parameter. [2 1 1]  
+%               (or squishing, via use of negative values) things via this
+%               parameter. [2 1 1]   
 %
 %   nolisten:   logical scalar.  If true, don't add the event listeners.
 %               The event listeners update the legend objects when you
@@ -286,7 +287,7 @@ p.addParameter('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, 
 p.addParameter('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
 p.addParameter('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
 p.addParameter('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
-p.addParameter('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'nonnegative', 'size', [1 3]}));
+p.addParameter('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
 p.addParameter('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
 
 p.KeepUnmatched = true;
