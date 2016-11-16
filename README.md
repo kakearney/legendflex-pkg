@@ -78,6 +78,7 @@ southwestoutside*      [7 5]     [-10   0]
 - Getting started        
 - Syntax        
 - Examples        
+- A note on legendflex with LateX        
 - Contributions
 
 ## Getting started
@@ -253,6 +254,50 @@ legendflex([hcont hquiv], {'contour', 'quiver'}, ...
 
 
 ![](./readmeExtras/README_04.png)
+
+
+## A note on legendflex with LateX
+
+
+Unfortunately, the Latex renderer doesn't play very nicely with legendflex.  It's something that bugs me in my own work too, but I've never been able to come up with a good workaround that would position things properly.  The legendflex function repositions everything using the 'Extent' property of all the text in the original legend.  However, the extent property of latex-rendered text doesn't always match up with the actual space taken up by the text... not quite sure why this is, and therefore I don't have a reliable way to calculate what that real space is.
+
+
+Here's an example using plain text objects.  Ideally, the red boxes would surround each text object, but in the Latex case, the Extent often leaves space above or below, or practically overlaps the text.
+
+
+
+```matlab
+figure;
+lax(1) = subplot(2,1,1);
+lax(2) = subplot(2,1,2);
+
+txt = {'Data 1', '$\frac{1}{2}$', '$var_{ij}^{k}$'};
+nt = length(txt);
+na = length(lax);
+
+set(lax, 'xlim', [0 nt+1], 'ylim', [0 nt+1]);
+
+for ii = 1:na
+ht(ii,:) = text(1:nt,1:nt,txt, 'parent', lax(ii), ...
+'interpreter', 'none', ...
+'fontsize', 14);
+end
+
+set(ht(2,:), 'interpreter', 'latex');
+
+for ii = 1:na
+for it = 1:nt
+ex = get(ht(ii,it), 'extent');
+rectangle('position', ex, 'parent', lax(ii), 'edgecolor', 'r');
+end
+end
+```
+
+
+![](./readmeExtras/README_05.png)
+
+Becuase of this, you really need to play around with properties (like padding) in order to get a legendflex legend that uses latex and looks decent.  Sometimes generating the legend first, then setting the latex rendering afterwards will help a bit.  Other times I generate the legend using a larger font size, then shrink the text back down after it's been positioned.  None of these hacks are ideal, but they're the best I've been able to come up with.
+
 
 
 ## Contributions
