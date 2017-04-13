@@ -231,6 +231,7 @@ function varargout = legendflex(varargin)
 
 hg2flag = ~verLessThan('matlab', '8.4.0');
 r2016aflag = ~verLessThan('matlab', '9.0.0');
+r2013bflag = ~verLessThan('matlab', '8.2.0');
 
 %-------------------
 % Parse input
@@ -281,33 +282,24 @@ else
     defref = NaN;
 end
 
-p = inputParser;
-if verLessThan('matlab', '8.2.0') % pre-R2013b
-    p.addParamVaue('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
-    p.addParamVaue('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-    p.addParamVaue('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-    p.addParamVaue('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
-    p.addParamVaue('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
-    p.addParamVaue('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
-    p.addParamVaue('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
-    p.addParamVaue('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
-    p.addParamVaue('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
-    p.addParamVaue('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
-    p.addParamVaue('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
-
+if r2013bflag
+    addParamMethod = 'addParameter';
 else
-    p.addParameter('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
-    p.addParameter('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-    p.addParameter('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-    p.addParameter('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
-    p.addParameter('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
-    p.addParameter('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
-    p.addParameter('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
-    p.addParameter('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
-    p.addParameter('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
-    p.addParameter('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
-    p.addParameter('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
+    addParamMethod = 'addParamValue';
 end
+
+p = inputParser;
+p.(addParamMethod)('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
+p.(addParamMethod)('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+p.(addParamMethod)('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+p.(addParamMethod)('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
+p.(addParamMethod)('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
+p.(addParamMethod)('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
+p.(addParamMethod)('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
+p.(addParamMethod)('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
+p.(addParamMethod)('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
+p.(addParamMethod)('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
+p.(addParamMethod)('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
 p.KeepUnmatched = true;
 
 p.parse(pv{:});
