@@ -251,15 +251,19 @@ narginchk(1,Inf);
 
 handlepassed = all(ishandle(varargin{1})); % for HG1/HG2 
 
+iscellstr = @(x) cellfun(@(y) ischar(y), x); % For now...
+% iscellstr = @(x) cellfun(...
+%     @(y) ischar(y) || (iscell(y) && all(cellfun(@ischar,y))), x); % for multi-line?
+
 if handlepassed
     legin = varargin(1:2);
-    if ~iscell(legin{2}) || ~all(cellfun(@ischar, legin{2}))
+    if ~iscell(legin{2}) || ~all(iscellstr(legin{2}))
         error('Legend labels must be a cell array of strings');
     end
     pv = varargin(3:end);
 else
     legin = varargin(1);
-    if ~iscell(legin{1}) || ~all(cellfun(@ischar, legin{1}))
+    if ~iscell(legin{1}) || ~all(iscellstr(legin{1}))
         if isnumeric(legin{1})
             error('Unable to parse input 1; check that handle(s) exist');
         else
@@ -278,18 +282,32 @@ else
 end
 
 p = inputParser;
-p.addParameter('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
-p.addParameter('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-p.addParameter('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
-p.addParameter('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
-p.addParameter('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
-p.addParameter('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
-p.addParameter('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
-p.addParameter('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
-p.addParameter('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
-p.addParameter('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
-p.addParameter('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
+if verLessThan('matlab', '8.2.0') % pre-R2013b
+    p.addParamVaue('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
+    p.addParamVaue('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+    p.addParamVaue('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+    p.addParamVaue('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
+    p.addParamVaue('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
+    p.addParamVaue('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
+    p.addParamVaue('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
+    p.addParamVaue('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
+    p.addParamVaue('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
+    p.addParamVaue('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
+    p.addParamVaue('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
 
+else
+    p.addParameter('xscale',     1,         @(x) validateattributes(x, {'numeric'}, {'nonnegative','scalar'}));
+    p.addParameter('ncol',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+    p.addParameter('nrow',       0,         @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer'}));
+    p.addParameter('ref',        defref,    @(x) validateattributes(x, {'numeric','handle'}, {'scalar'}));
+    p.addParameter('anchor',     [3 3],     @(x) validateattributes(x, {'numeric','cell'}, {'size', [1 2]}));
+    p.addParameter('buffer',     [-10 -10], @(x) validateattributes(x, {'numeric'}, {'size', [1 2]}));
+    p.addParameter('bufferunit', 'pixels',  @(x) validateattributes(x, {'char'}, {}));
+    p.addParameter('box',        'on',      @(x) validateattributes(x, {'char'}, {}));
+    p.addParameter('title',      '',        @(x) validateattributes(x, {'char','cell'}, {}));
+    p.addParameter('padding',    [2 1 1],   @(x) validateattributes(x, {'numeric'}, {'size', [1 3]})); % 'nonnegative'
+    p.addParameter('nolisten',   false,     @(x) validateattributes(x, {'logical'}, {'scalar'}));
+end
 p.KeepUnmatched = true;
 
 p.parse(pv{:});
