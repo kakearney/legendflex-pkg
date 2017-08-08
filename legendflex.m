@@ -638,7 +638,11 @@ end
 if Opt.box
     set(hnew.leg, 'box', 'on');
 else
-    set(hnew.leg, 'visible', 'off');
+    if hg2flag
+        set(hnew.leg, 'box', 'off', 'color', 'none', 'xcolor', 'none', 'ycolor', 'none');
+    else
+        set(hnew.leg, 'visible', 'off');
+    end
 end
 
 % Delete the temporary legend
@@ -657,7 +661,7 @@ drawnow; % Not sure why this is necessary for the currentaxes to take effect, bu
 %
 % TODO: need to add proper calcs for when title included
 %
-% Thanks to Søren Enemark for this suggestion.
+% Thanks to Sï¿½ren Enemark for this suggestion.
 
 if ~addtitle
     try % TODO: Crashing on some edge cases
