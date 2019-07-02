@@ -464,9 +464,11 @@ currax = get(figh, 'currentaxes');
 
 legpospx = getpos(h.leg, 'px');
 
-% rowHeight = legpospx(4)/nobj;
-vmarginNm =  0.275/nobj;
-vmarginPx = legpospx(4) * vmarginNm;
+% After some error-and-trial, it seems the v(ertical)marginPx that MATLAB applied is 
+% 3.5px in total. This margin should be a fixed number, because the vertical margin 
+% appears not change with the zoom-in scale of the figure.
+vmarginNm = 3.5/legpospx(4);
+vmarginPx = 3.5;
 
 rowHeightNm = (1 - vmarginNm)/nobj;
 rowHeight = rowHeightNm .* legpospx(4);
