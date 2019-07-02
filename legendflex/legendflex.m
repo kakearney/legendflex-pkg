@@ -526,13 +526,13 @@ xsymbnew = xsymbnew(1:nobj);
 ysymbnew = ysymbnew(1:nobj);
 
 xtext = xsymbnew + Opt.padding(2) + symbolWidthPx;
-ytext = ysymbnew;% + 1;
+ytext = ysymbnew - vmarginPx*0.5;% + 1;
 
 xsymbold = zeros(nobj,1);
 ysymbold = 1 - (1/nobj)*(1:nobj);
 
 wnewleg = sum(colWidth);
-hnewleg = rowHeight*Opt.nrow + vmarginPx;
+hnewleg = rowHeight*Opt.nrow + vmarginPx*2;
 
 if addtitle
     xttl = wnewleg/2;
@@ -600,7 +600,7 @@ for ii = 1:nsymbol
             ynorm = (xy{2}- (1-idx*rowHeightNm))./rowHeightNm;
 
             xnew = xnorm * symbolWidthPx + xsymbnew(idx);
-            ynew = ynorm * rowHeight     + ysymbnew(idx);
+            ynew = ynorm * rowHeight     + ysymbnew(idx) + vmarginPx*0.5;
             
             set(chld(ic), 'xdata', xnew, 'ydata', ynew);
         end
@@ -622,7 +622,7 @@ for ii = 1:nsymbol
         ynorm = (xy{2}- (1-idx*rowHeightNm))./rowHeightNm;
 
         xnew = xnorm * symbolWidthPx + xsymbnew(idx);
-        ynew = ynorm * rowHeight     + ysymbnew(idx);
+        ynew = ynorm * rowHeight     + ysymbnew(idx) + vmarginPx*0.5;
 
         set(hnew.obj(nobj+ii), 'xdata', xnew, 'ydata', ynew);
  
@@ -657,32 +657,32 @@ delete(h.leg);
 set(figh, 'currentaxes', currax);
 drawnow; % Not sure why this is necessary for the currentaxes to take effect, but it is
 
-% Fix for vertical-alignment issue: This solution still isn't perfect, but
-% it seems to help for most Interpreter-none and Interpreter-latex cases.
-% The TeX interpreter still places sub- and superscripts too high/low... no
-% robust fix found for that yet.
-%
-% TODO: need to add proper calcs for when title included
-%
-% Thanks to S�ren Enemark for this suggestion.
-
-if ~addtitle
-    try % TODO: Crashing on some edge cases
-        textobj = hnew.obj(1:nobj);
-        yheight = get(hnew.leg, 'ylim');
-        yheight = yheight(2);
-
-        ylo = get(textobj(Opt.nrow), 'extent');
-        ylo = ylo(2);
-        yhi = get(textobj(1), 'extent');
-        yhi = sum(yhi([2 4]));
-        dy = yheight/2 - 0.5*(ylo + yhi);
-        for ii = 1:length(textobj)
-            pos = get(textobj(ii), 'position');
-            set(textobj(ii), 'position', pos + [0 dy 0]);
-        end
-    end
-end
+% % Fix for vertical-alignment issue: This solution still isn't perfect, but
+% % it seems to help for most Interpreter-none and Interpreter-latex cases.
+% % The TeX interpreter still places sub- and superscripts too high/low... no
+% % robust fix found for that yet.
+% %
+% % TODO: need to add proper calcs for when title included
+% %
+% % Thanks to S�ren Enemark for this suggestion.
+% 
+% if ~addtitle
+%     try % TODO: Crashing on some edge cases
+%         textobj = hnew.obj(1:nobj);
+%         yheight = get(hnew.leg, 'ylim');
+%         yheight = yheight(2);
+% 
+%         ylo = get(textobj(Opt.nrow), 'extent');
+%         ylo = ylo(2);
+%         yhi = get(textobj(1), 'extent');
+%         yhi = sum(yhi([2 4]));
+%         dy = yheight/2 - 0.5*(ylo + yhi);
+%         for ii = 1:length(textobj)
+%             pos = get(textobj(ii), 'position');
+%             set(textobj(ii), 'position', pos + [0 dy 0]);
+%         end
+%     end
+% end
 
 %-------------------
 % Callbacks and 
