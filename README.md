@@ -3,6 +3,7 @@
 
 
 Author: Kelly Kearney
+[![View legendflex.m: a more flexible, customizable legend on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/31092-legendflex-m-a-more-flexible-customizable-legend)
 
 
 This repository includes the code for the `legendflex.m` Matlab function, along with all dependent functions required to run it.
