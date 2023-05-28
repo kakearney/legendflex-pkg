@@ -704,7 +704,7 @@ setappdata(hnew.leg, 'legflex', Lf);
 % Resize listeners
 
 addlistener(hnew.leg, 'Position', 'PostSet', @(src,evt) updatelegappdata(src,evt,hnew.leg));
-if hg2flag && strcmp(Lf.ref.Type, 'figure')
+if hg2flag && strcmp(get(Lf.ref, 'Type'), 'figure')
     addlistener(Lf.ref, 'SizeChanged', @(src,evt) updatelegpos(src,evt,hnew.leg));
 else
     addlistener(Lf.ref, 'Position', 'PostSet', @(src,evt) updatelegpos(src,evt,hnew.leg));
