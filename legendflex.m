@@ -466,9 +466,11 @@ currax = get(figh, 'currentaxes');
 
 legpospx = getpos(h.leg, 'px');
 
-% rowHeight = legpospx(4)/nobj;
-vmarginNm =  0.275/nobj;
-vmarginPx = legpospx(4) * vmarginNm;
+% After some error-and-trial, it seems the v(ertical)marginPx that MATLAB applied is 
+% 3.5px in total. This margin should be a fixed number, because the vertical margin 
+% appears not change with the zoom-in scale of the figure.
+vmarginNm = 3.5/legpospx(4);
+vmarginPx = 3.5;
 
 rowHeightNm = (1 - vmarginNm)/nobj;
 rowHeight = rowHeightNm .* legpospx(4);
@@ -526,13 +528,13 @@ xsymbnew = xsymbnew(1:nobj);
 ysymbnew = ysymbnew(1:nobj);
 
 xtext = xsymbnew + Opt.padding(2) + symbolWidthPx;
-ytext = ysymbnew;% + 1;
+ytext = ysymbnew - vmarginPx*0.5;
 
 xsymbold = zeros(nobj,1);
 ysymbold = 1 - (1/nobj)*(1:nobj);
 
 wnewleg = sum(colWidth);
-hnewleg = rowHeight*Opt.nrow + vmarginPx;
+hnewleg = rowHeight*Opt.nrow + vmarginPx*2;
 
 if addtitle
     xttl = wnewleg/2;
@@ -605,7 +607,8 @@ for ii = 1:nsymbol
             ynorm = (xy{2}- (1-idx*rowHeightNm))./rowHeightNm;
 
             xnew = xnorm * symbolWidthPx + xsymbnew(idx);
-            ynew = ynorm * rowHeight     + ysymbnew(idx);
+            % ynew = ynorm * rowHeight     + ysymbnew(idx);
+            ynew = ynorm * rowHeight     + ysymbnew(idx) + vmarginPx*0.5;
             
             set(chld(ic), 'xdata', xnew, 'ydata', ynew);
         end
@@ -627,7 +630,8 @@ for ii = 1:nsymbol
         ynorm = (xy{2}- (1-idx*rowHeightNm))./rowHeightNm;
 
         xnew = xnorm * symbolWidthPx + xsymbnew(idx);
-        ynew = ynorm * rowHeight     + ysymbnew(idx);
+        % ynew = ynorm * rowHeight     + ysymbnew(idx);
+        ynew = ynorm * rowHeight     + ysymbnew(idx) + vmarginPx*0.5;
 
         set(hnew.obj(nobj+ii), 'xdata', xnew, 'ydata', ynew);
  
@@ -671,23 +675,23 @@ drawnow; % Not sure why this is necessary for the currentaxes to take effect, bu
 %
 % Thanks to S�ren Enemark for this suggestion.
 
-if ~addtitle
-    try % TODO: Crashing on some edge cases
-        textobj = hnew.obj(1:nobj);
-        yheight = get(hnew.leg, 'ylim');
-        yheight = yheight(2);
-
-        ylo = get(textobj(Opt.nrow), 'extent');
-        ylo = ylo(2);
-        yhi = get(textobj(1), 'extent');
-        yhi = sum(yhi([2 4]));
-        dy = yheight/2 - 0.5*(ylo + yhi);
-        for ii = 1:length(textobj)
-            pos = get(textobj(ii), 'position');
-            set(textobj(ii), 'position', pos + [0 dy 0]);
-        end
-    end
-end
+% if ~addtitle
+%     try % TODO: Crashing on some edge cases
+%         textobj = hnew.obj(1:nobj);
+%         yheight = get(hnew.leg, 'ylim');
+%         yheight = yheight(2);
+% 
+%         ylo = get(textobj(Opt.nrow), 'extent');
+%         ylo = ylo(2);
+%         yhi = get(textobj(1), 'extent');
+%         yhi = sum(yhi([2 4]));
+%         dy = yheight/2 - 0.5*(ylo + yhi);
+%         for ii = 1:length(textobj)
+%             pos = get(textobj(ii), 'position');
+%             set(textobj(ii), 'position', pos + [0 dy 0]);
+%         end
+%     end
+% end
 
 
 %-------------------
