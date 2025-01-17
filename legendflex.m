@@ -347,6 +347,9 @@ if r2016aflag
     wtmp = warning('off', 'MATLAB:handle_graphics:exceptions:SceneNode'); % silence Latex interpreter thing
     [h.leg, h.obj, h.labeledobj, h.textstr] = legend(legin{:}, extra{:}, 'location', 'northeast');
     warning(wtmp);
+    if isempty(h.obj)
+        error('The legacy output option for legend.m (on which legendflex.m relies) is starting to fail when applied to some types of objects.  This is one of those cases.  Sorry');
+    end
     nobj = length(h.labeledobj);
     for it = 1:length(textProps)
         set(h.obj(1:nobj), textProps{it}, tprop{it});
@@ -559,6 +562,11 @@ hnew.leg = axes('units', 'pixels', ...
                'box', 'on', ...
                'parent', figh);
 
+if ~verLessThan('MATLAB', '9.5') % R2018b or later
+    hnew.leg.Toolbar.Visible = 'off';
+    disableDefaultInteractivity(hnew.leg)
+end
+
 % Copy the text strings to the new legend
            
 textProps = {'FontAngle','FontName','FontSize','FontUnits','FontWeight','Interpreter','HorizontalAlignment','VerticalAlignment'};
@@ -704,7 +712,7 @@ setappdata(hnew.leg, 'legflex', Lf);
 % Resize listeners
 
 addlistener(hnew.leg, 'Position', 'PostSet', @(src,evt) updatelegappdata(src,evt,hnew.leg));
-if hg2flag && strcmp(Lf.ref.Type, 'figure')
+if hg2flag && strcmp(get(Lf.ref, 'Type'), 'figure')
     addlistener(Lf.ref, 'SizeChanged', @(src,evt) updatelegpos(src,evt,hnew.leg));
 else
     addlistener(Lf.ref, 'Position', 'PostSet', @(src,evt) updatelegpos(src,evt,hnew.leg));
